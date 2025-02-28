@@ -103,7 +103,24 @@ Hay que tomar en cuenta que se setear el porcentaje de velocidad para cada motor
 > Estos valores se pueden configurar de acuerdo a las necesidades del usuario.
 
 
+### Envío de datos - ESP32
 
+En el caso del microcontrolador ESP32 se utilizó ROS para realizar la operación Teleop de turtlebot, mediante un suscriptor a "cmd_vel", se utiliza un callback del mensaje del suscriptor para obtener los valores de velocidad angular y lineal. Se realiza el siguiente código para obtener las velocidades del motor izquierdo y derecho de acuerdo a fórmulas.
 
+        vel_angular = msg.angular.z;
+        vel_lineal = msg.linear.x;
+        velocidad = vel_angular * wheel_sep; 
+        vel_der = vel_lineal + velocidad/2;
+        vel_izq = vel_lineal - velocidad/2;
+        velIzq = int(vel_izq*(99)/0.20);
+        velDer = int(vel_der*(99)/0.20);
 
-    
+Los condicionales depende de los valores obtenidos de velIzq y velDer, tomando en cuenta si son negativos, o si están compuesto por 1 o 2 dígitos.
+
+Finalmente, la función para hacer el envío de velocidades es el siguiente:
+
+         serial2.println(wheel_left_speed.wheel_right_speed);
+
+> Tomar en cuenta que se envía con el formato que ya se explicó.
+
+En el caso de no desear utilizar ROS, se puede cambiar el código para solamente hacer el envío de velocidades mediante la terminal del ESP32 y así controlar los motores del robot de manera manual.
