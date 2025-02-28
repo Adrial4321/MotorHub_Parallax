@@ -49,11 +49,11 @@ void loop()
 { 
 /* Estructuracion de cadena de caracteres hacia Parallax P2 Edge*/ 
 if(velDer>=0 && velDer<10){
- wheel_right_speed="+0"String(velDer);
+ wheel_right_speed="+0"+String(velDer);
 } 
 else if(velDer<0 && velDer>-10){
  int vel = velDer * -1;
- wheel_right_speed="-0",String(vel);
+ wheel_right_speed="-0"+String(vel);
 } 
 else if(velDer>=10){
  wheel_right_speed="+"+String(velDer);
@@ -77,7 +77,7 @@ else if(velIzq>=10){
 }
 
 // Mensaje hacia Parallax P2 Edge con formato ±XX±XX 
- seria12.println(wheel_left_speed.wheel_right_speed);
+ serial2.println(wheel_left_speed.wheel_right_speed);
  nh.spinOnce();
  delay(200); 
 }
