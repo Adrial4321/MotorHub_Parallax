@@ -10,6 +10,7 @@ Este proyecto presenta el diseño para el manejo de un robot diferencial con la 
 La arquitectura del robot se basa en la comunicación entre 2 micro controladores, el microcontrolador P2 Edge es el encargado del funcionamiento de los motores Hub mediante la recepción de valores de velocidad enviados por el ESP32, el microcoontrolador ESP32 permite la interación con ROS para la realización de mapeo por TeleOp o navegación en el entorno cerrado.
 
 Referencia del diagrama de conexiones para el funcionamiento del robot.
+
 ![image](https://github.com/user-attachments/assets/10fb5bba-ee98-44d1-9b0a-e2b8ebb918dd)
 
 ### Librería para el control de motores HUB
