@@ -76,7 +76,8 @@ else if(velIzq>=10){
  wheel_left_speed=String(velIzq);
 }
 
-// Mensaje hacia Parallax P2 Edge con formato -1-XX-1-XX seria12.println(wheel_left_speed.wheel_right_speed);
+// Mensaje hacia Parallax P2 Edge con formato ±XX±XX 
+ seria12.println(wheel_left_speed.wheel_right_speed);
  nh.spinOnce();
  delay(200); 
 }
