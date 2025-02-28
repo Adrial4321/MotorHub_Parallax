@@ -1,0 +1,193 @@
+'' =================================================================================================
+''
+''   File....... Motor.spin2
+''   Authors.... Johan Agurto - Adrián Correa
+''   Started.... May 2024
+''
+'' =================================================================================================
+
+CON { timing }
+
+  CLK_FREQ = 270_000_000                              ' system freq as a constant
+  _clkfreq = CLK_FREQ                                 ' set system clock
+
+CON { fixed io pins }
+  RX1     = 63
+  TX1     = 62
+    { O }
+  SF_CS    = 61
+  SF_CK    = 60
+  SF_SDO   = 59  { O }
+  SF_SDI   = 58  { I }
+  BAUD_RATE = 57600
+
+    #0, DDU_Unknown, DDU_MM, DDU_CM, DDU_IN, DDU_FT, DDU_M, DDU_KM, DDU_MI
+
+    #0, DRU_Unknown, DRU_HALL_TICKS, DRU_DEGREES, DRU_ROTATIONS
+
+    #0, DTU_Unknown, DTU_MILLISEC, DTU_SEC
+VAR
+
+  long rx_buffer
+  long rx2_buffer
+  long rx3_buffer
+  long rx4_buffer
+  long rx5_buffer
+  long rx6_buffer
+  long contador
+  long vel_izq
+  long vel_der
+  long tickDer
+  long tickIzq
+  long ticksTotales[6]
+  long ticksDerPositivos
+  long ticksDerNegativos
+  long ticksIzqPositivos
+  long ticksIzqNegativos
+
+
+OBJ { our Drive Subsystem }
+
+    user    :   "isp_bldc_motor_userconfig"     ' driver configuration
+    wheels  :   "isp_steering_2wheel"                  ' the dual-drive BLDC motors
+    serial : "jm_fullduplexserial"
+
+PUB main() | basePinLt, basePinRt, voltage, motor, detectModeLt, detectModeRt
+'' DEMO Driving a two wheeled platform
+    serial.start(60, 61, 0, BAUD_RATE)
+    debug("* dual motor demo")
+    ticksTotales[0] := 0
+    ticksTotales[1] := 0
+    ticksTotales[2] := 0
+    ticksTotales[3] := 0
+    ticksTotales[4] := 0
+    ticksTotales[5] := 0
+    contador:= 0
+    ' validate user settings/choicess
+    '  do NOT start motor unless all are legit!
+    basePinLt := wheels.validBasePinForChoice(user.LEFT_MOTOR_BASE)
+    basePinRt := wheels.validBasePinForChoice(user.RIGHT_MOTOR_BASE)
+    detectModeLt := wheels.validDetectModeForChoice(user.LEFT_BOARD_TYPE)
+    detectModeRt := wheels.validDetectModeForChoice(user.RIGHT_BOARD_TYPE)
+    voltage := wheels.validVoltageForChoice(user.DRIVE_VOLTAGE)
+    motor := wheels.validMotorForChoice(user.MOTOR_TYPE)
+
+    if basePinLt <> wheels.INVALID_PIN_BASE and basePinRt <> wheels.INVALID_PIN_BASE and voltage <> wheels.INVALID_VOLTAGE and motor <> wheels.INVALID_MOTOR and detectModeLt <> wheels.INVALID_DET_MODE and detectModeRt <> wheels.INVALID_DET_MODE
+        ' start our dual motor driver
+
+        ' start our motor drivers (left and right)
+        wheels.start(basePinLt, basePinRt, voltage, detectModeLt, detectModeRt)
+
+        ' just don't draw current at stop
+        wheels.holdAtStop(false)
+        wheels.setMaxSpeed(14)  ' override 75% with 100%
+
+        ' now drive!
+        waitUntilMotorReady()
+        vel_izq := 0
+        vel_der := 0
+        tickIzq := 0
+        tickDer := 0
+        serial.rxflush()
+        repeat
+          rx_buffer := serial.rxcheck()
+          rx2_buffer := serial.rxcheck()
+          rx3_buffer := serial.rxcheck()
+          rx4_buffer := serial.rxcheck()
+          rx5_buffer := serial.rxcheck()
+          rx6_buffer := serial.rxcheck()
+          if rx_buffer <> "+" and rx_buffer <> "-"
+            serial.rxflush()
+          if rx_buffer == "-"
+            if rx2_buffer <> -1
+              if rx3_buffer <> -1
+                vel_izq := -(rx2_buffer-48)*10 -(rx3_buffer-48)
+              else
+                vel_izq := -(rx2_buffer-48)
+          if rx_buffer == "+"
+            if rx2_buffer <> -1
+              if rx3_buffer <> -1
+                vel_izq := (rx2_buffer-48)*10 +(rx3_buffer-48)
+              else
+                vel_izq := (rx2_buffer-48)
+
+          if rx4_buffer == "-"
+            if rx5_buffer <> -1
+              if rx6_buffer <> -1
+                vel_der := -(rx5_buffer-48)*10 -(rx6_buffer-48)
+              else
+                vel_der := -(rx5_buffer-48)
+          if rx4_buffer == "+"
+            if rx2_buffer <> -1
+              if rx3_buffer <> -1
+                vel_der := (rx5_buffer-48)*10 +(rx6_buffer-48)
+              else
+                vel_izq := (rx5_buffer-48)
+          'wheels.driveAtPower(vel_izq,vel_der)
+          wheels.driveAtPower(vel_izq,vel_der)
+          {wheels.getDistance(DDU_CM)
+          wheels.getRotationCount(DRU_DEGREES)
+          tickIzq,tickDer :=wheels.getHall()}
+          waitms(200)
+
+    else
+        debug("* ERROR user configuration NOT valid!")
+
+
+PRI waitUntilMotorReady()
+    if wheels.isReady() == false
+        debug("* wait motors ready...")
+        repeat
+            if wheels.isReady()
+                quit
+            else
+                waitms(2)
+    debug("* Motors ready, let's drive!")
+
+
+PRI waitUntilMotorDone()
+    if wheels.isStarting() == false
+         debug("* wait until motors start...")
+         repeat
+            if wheels.isStarting()
+                quit
+            else
+                waitms(2)
+
+    if wheels.isStopped() == false
+        debug("* wait until motors finish...")
+        repeat
+            if wheels.isStopped()
+                quit
+            else
+                waitms(2)
+    debug("* Motors stopped!")
+
+
+CON { license }
+{{
+
+ -------------------------------------------------------------------------------------------------
+  MIT License
+
+  Copyright (c) 2022 Iron Sheep Productions, LLC
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+ =================================================================================================
+}}
